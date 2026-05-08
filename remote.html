@@ -17,182 +17,182 @@
     --red: #ff2244;
     --yellow: #ffcc00;
     --blue: #44aaff;
+    --orange: #ff8844;
     --text: #e0e0e0;
     --dim: #555;
   }
 
   html, body {
-    width: 100%; min-height: 100vh;
+    width: 100%;
+    min-height: 100vh;
     background: var(--bg);
     color: var(--text);
     font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* ── Layout shell ── */
+  .page {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── Header ── */
+  header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 5vw;
-    gap: 5vw;
+    gap: 8px;
   }
 
   h1 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 9vw;
+    font-size: clamp(36px, 8vw, 64px);
     letter-spacing: 0.15em;
     color: var(--green);
     text-shadow: 0 0 20px rgba(0,255,136,0.3);
-    text-align: center;
-    margin-top: 3vw;
   }
 
   #status {
-    font-size: 3.5vw;
-    letter-spacing: 0.3em;
+    font-size: clamp(11px, 2.5vw, 14px);
+    letter-spacing: 0.35em;
     color: var(--dim);
     text-transform: uppercase;
-    text-align: center;
   }
-  #status.connected { color: var(--green); }
+  #status.connected    { color: var(--green); }
   #status.disconnected { color: var(--red); }
 
-  .section-label {
-    font-size: 3vw;
-    letter-spacing: 0.4em;
-    color: var(--dim);
-    text-transform: uppercase;
-    align-self: flex-start;
-    margin-bottom: -2vw;
-  }
-
-  .btn-row {
-    display: flex;
-    gap: 4vw;
-    width: 100%;
-    justify-content: center;
-  }
-
-  button {
-    flex: 1;
-    max-width: 50vw;
-    padding: 6vw 0;
-    border: 2px solid var(--border);
-    background: var(--card);
-    color: var(--text);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 7vw;
-    letter-spacing: 0.12em;
-    border-radius: 2vw;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-
-  button:active {
-    transform: scale(0.95);
-  }
-
-  button.start-btn {
-    border-color: var(--green);
-    color: var(--green);
-    box-shadow: 0 0 20px rgba(0,255,136,0.08);
-  }
-  button.start-btn:active { background: rgba(0,255,136,0.12); }
-
-  button.stop-btn {
-    border-color: var(--red);
-    color: var(--red);
-    box-shadow: 0 0 20px rgba(255,34,68,0.08);
-  }
-  button.stop-btn:active { background: rgba(255,34,68,0.12); }
-
-  button.pause-btn {
-    border-color: var(--yellow);
-    color: var(--yellow);
-    box-shadow: 0 0 20px rgba(255,204,0,0.08);
-  }
-  button.pause-btn:active { background: rgba(255,204,0,0.12); }
-
-  button.resume-btn {
-    border-color: var(--blue);
-    color: var(--blue);
-    box-shadow: 0 0 20px rgba(68,170,255,0.08);
-  }
-  button.resume-btn:active { background: rgba(68,170,255,0.12); }
-
-  button:disabled {
-    opacity: 0.25;
-    pointer-events: none;
-  }
-
+  /* ── Divider ── */
   .divider {
     width: 100%;
     height: 1px;
     background: var(--border);
   }
 
+  /* ── Section label ── */
+  .label {
+    font-size: clamp(10px, 2vw, 12px);
+    letter-spacing: 0.4em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  /* ── Button grid ── */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  button {
+    flex: 1;
+    padding: 0;
+    height: clamp(64px, 10vw, 88px);
+    border: 2px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(20px, 4vw, 32px);
+    letter-spacing: 0.12em;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s, transform 0.08s, box-shadow 0.12s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  button:active { transform: scale(0.94); }
+
+  button.green  { border-color: var(--green);  color: var(--green);  box-shadow: 0 0 16px rgba(0,255,136,0.08); }
+  button.red    { border-color: var(--red);    color: var(--red);    box-shadow: 0 0 16px rgba(255,34,68,0.08); }
+  button.yellow { border-color: var(--yellow); color: var(--yellow); box-shadow: 0 0 16px rgba(255,204,0,0.08); }
+  button.blue   { border-color: var(--blue);   color: var(--blue);   box-shadow: 0 0 16px rgba(68,170,255,0.08); }
+  button.orange { border-color: var(--orange); color: var(--orange); box-shadow: 0 0 16px rgba(255,136,68,0.08); }
+
+  button.green:active  { background: rgba(0,255,136,0.1); }
+  button.red:active    { background: rgba(255,34,68,0.1); }
+  button.yellow:active { background: rgba(255,204,0,0.1); }
+  button.blue:active   { background: rgba(68,170,255,0.1); }
+  button.orange:active { background: rgba(255,136,68,0.1); }
+
+  /* Buzz button is taller and full width */
+  button.buzz-btn {
+    height: clamp(72px, 12vw, 100px);
+    font-size: clamp(22px, 4.5vw, 36px);
+    letter-spacing: 0.2em;
+  }
+
+  /* ── Log line ── */
   #log {
-    width: 100%;
-    font-size: 3vw;
+    font-size: clamp(11px, 2vw, 13px);
     color: var(--dim);
     text-align: center;
-    letter-spacing: 0.1em;
-    min-height: 4vw;
+    letter-spacing: 0.15em;
+    min-height: 18px;
   }
 </style>
 </head>
 <body>
+<div class="page">
 
-<h1>TIMER REMOTE</h1>
-<div id="status" class="disconnected">● DISCONNECTED</div>
+  <header>
+    <h1>TIMER REMOTE</h1>
+    <div id="status" class="disconnected">● DISCONNECTED</div>
+  </header>
 
-<div class="section-label">SELECT DURATION</div>
-<div class="btn-row">
-  <button class="start-btn" onclick="send('start',60)">1 MIN</button>
-  <button class="start-btn" onclick="send('start',120)">2 MIN</button>
+  <div class="divider"></div>
+
+  <span class="label">Select duration</span>
+  <div class="btn-row">
+    <button class="green" onclick="send('start', 60)">1 MIN</button>
+    <button class="green" onclick="send('start', 120)">2 MIN</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <span class="label">Playback</span>
+  <div class="btn-row">
+    <button class="yellow" onclick="send('pause')">⏸ PAUSE</button>
+    <button class="blue"   onclick="send('resume')">▶ RESUME</button>
+  </div>
+  <div class="btn-row">
+    <button class="red" onclick="send('stop')">■ STOP</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <span class="label">Buzzer</span>
+  <div class="btn-row">
+    <button class="orange buzz-btn" onclick="send('buzz')">🔔 BUZZ</button>
+  </div>
+
+  <div id="log">–</div>
+
 </div>
-
-<div class="divider"></div>
-
-<div class="section-label">CONTROLS</div>
-<div class="btn-row">
-  <button class="pause-btn" onclick="send('pause')">PAUSE</button>
-  <button class="resume-btn" onclick="send('resume')">RESUME</button>
-</div>
-<div class="btn-row">
-  <button class="stop-btn" onclick="send('stop')" style="max-width:100%">■ STOP</button>
-</div>
-
-<div id="log">–</div>
 
 <script>
   const statusEl = document.getElementById('status');
-  const logEl = document.getElementById('log');
+  const logEl    = document.getElementById('log');
 
   const ws = new WebSocket(`ws://${location.host}`);
 
-  ws.onopen = () => {
-    statusEl.textContent = '● CONNECTED';
-    statusEl.className = 'connected';
-  };
-  ws.onclose = () => {
-    statusEl.textContent = '● DISCONNECTED';
-    statusEl.className = 'disconnected';
-  };
+  ws.onopen  = () => { statusEl.textContent = '● CONNECTED';    statusEl.className = 'connected'; };
+  ws.onclose = () => { statusEl.textContent = '● DISCONNECTED'; statusEl.className = 'disconnected'; };
 
   function send(action, seconds) {
-    if (ws.readyState !== WebSocket.OPEN) {
-      logEl.textContent = 'NOT CONNECTED';
-      return;
-    }
-    const msg = seconds ? { action, seconds } : { action };
-    ws.send(JSON.stringify(msg));
+    if (ws.readyState !== WebSocket.OPEN) { logEl.textContent = 'NOT CONNECTED'; return; }
+    ws.send(JSON.stringify(seconds ? { action, seconds } : { action }));
 
     const labels = {
-      start: seconds === 60 ? 'STARTED 1 MIN' : 'STARTED 2 MIN',
-      pause: 'PAUSED',
-      resume: 'RESUMED',
-      stop: 'STOPPED'
+      start:  seconds === 60 ? '→ STARTED 1 MIN' : '→ STARTED 2 MIN',
+      pause:  '→ PAUSED',
+      resume: '→ RESUMED',
+      stop:   '→ STOPPED',
+      buzz:   '→ BUZZ SENT',
     };
-    logEl.textContent = '→ ' + labels[action];
+    logEl.textContent = labels[action] || '→ SENT';
     setTimeout(() => logEl.textContent = '–', 2000);
   }
 </script>

@@ -28,7 +28,6 @@
     font-family: 'Share Tech Mono', monospace;
   }
 
-  /* Scanline overlay */
   body::before {
     content: '';
     position: fixed;
@@ -44,7 +43,6 @@
     z-index: 10;
   }
 
-  /* Vignette */
   body::after {
     content: '';
     position: fixed;
@@ -82,6 +80,22 @@
     user-select: none;
   }
 
+  #buzz-flash {
+    position: fixed;
+    inset: 0;
+    background: var(--red);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 20;
+  }
+  #buzz-flash.active {
+    animation: buzz-anim 0.8s ease-out forwards;
+  }
+  @keyframes buzz-anim {
+    0%   { opacity: 0.4; }
+    100% { opacity: 0; }
+  }
+
   #bottom-bar {
     position: fixed;
     bottom: 3vh;
@@ -98,15 +112,9 @@
     transition: color 0.3s;
   }
 
-  .indicator.active {
-    color: var(--green);
-  }
+  .indicator.active { color: var(--green); }
+  .indicator.paused-ind { color: var(--yellow); }
 
-  .indicator.paused-ind {
-    color: var(--yellow);
-  }
-
-  /* Corner grid lines decorative */
   .corner {
     position: fixed;
     width: 5vw;
@@ -129,6 +137,7 @@
 </head>
 <body>
 
+<div id="buzz-flash"></div>
 <div class="corner tl"></div>
 <div class="corner tr"></div>
 <div class="corner bl"></div>
@@ -148,38 +157,30 @@
   const indRunning = document.getElementById('ind-running');
   const indPaused = document.getElementById('ind-paused');
   const indStopped = document.getElementById('ind-stopped');
+  const buzzFlash = document.getElementById('buzz-flash');
 
-  let totalSeconds = 0;
   let remaining = 0;
   let interval = null;
-  let state = 'stopped'; // stopped | running | paused
+  let state = 'stopped';
   let beepedAt30 = false;
 
-  // AudioContext for beep
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  function beep(times = 1, freq = 500, duration = 0.7, gap = 0.15) {
-    let t = audioCtx.currentTime;
-    for (let i = 0; i < times; i++) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'triangle';
-      gain.gain.setValueAtTime(0.3, t);
-      osc.start(t);
-      osc.stop(t + duration);
-      t += duration + gap;
-    }
-  }
-
-  // Unlock AudioContext on first interaction
   document.addEventListener('click', () => {
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
   }, { once: true });
+
+  function beep(freq = 500, duration = 1) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = freq;
+    osc.type = 'triangle';
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + duration);
+  }
 
   function formatTime(s) {
     const m = Math.floor(s / 60);
@@ -189,15 +190,9 @@
 
   function updateDisplay() {
     display.textContent = remaining >= 0 ? formatTime(remaining) : '0:00';
-
-    display.classList.remove('warning', 'urgent', 'done');
-    if (remaining <= 0 && state === 'running') {
-      display.classList.add('done');
-    } else if (remaining <= 10) {
-      display.classList.add('urgent');
-    } else if (remaining <= 30) {
-      display.classList.add('warning');
-    }
+    display.classList.remove('warning', 'urgent');
+    if (remaining <= 10 && remaining > 0) display.classList.add('urgent');
+    else if (remaining <= 30 && remaining > 0) display.classList.add('warning');
   }
 
   function setIndicator(s) {
@@ -207,35 +202,35 @@
     indStopped.classList.toggle('active', s === 'stopped');
   }
 
+  function runTick() {
+    interval = setInterval(() => {
+      if (remaining > 0) {
+        remaining--;
+        updateDisplay();
+        if (remaining === 30 && !beepedAt30) {
+          beepedAt30 = true;
+          beep(500, 1);
+        }
+        if (remaining === 0) {
+          clearInterval(interval);
+          state = 'stopped';
+          statusBar.textContent = "TIME'S UP";
+          setIndicator('stopped');
+          beep(600, 1);
+        }
+      }
+    }, 1000);
+  }
+
   function startTimer(seconds) {
     clearInterval(interval);
-    totalSeconds = seconds;
     remaining = seconds;
     beepedAt30 = false;
     state = 'running';
     statusBar.textContent = 'RUNNING';
     setIndicator('running');
     updateDisplay();
-
-    interval = setInterval(() => {
-      if (remaining > 0) {
-        remaining--;
-        updateDisplay();
-
-        if (remaining === 30 && !beepedAt30) {
-          beepedAt30 = true;
-          beep();
-        }
-
-        if (remaining === 0) {
-          clearInterval(interval);
-          state = 'stopped';
-          statusBar.textContent = 'TIME\'S UP';
-          setIndicator('stopped');
-          beep(1, 600, 1, 0.15);
-        }
-      }
-    }, 1000);
+    runTick();
   }
 
   function pauseTimer() {
@@ -251,24 +246,7 @@
     state = 'running';
     statusBar.textContent = 'RUNNING';
     setIndicator('running');
-
-    interval = setInterval(() => {
-      if (remaining > 0) {
-        remaining--;
-        updateDisplay();
-        if (remaining === 30 && !beepedAt30) {
-          beepedAt30 = true;
-          beep(3, 880, 0.12, 0.13);
-        }
-        if (remaining === 0) {
-          clearInterval(interval);
-          state = 'stopped';
-          statusBar.textContent = 'TIME\'S UP';
-          setIndicator('stopped');
-          beep(5, 660, 0.2, 0.1);
-        }
-      }
-    }, 1000);
+    runTick();
   }
 
   function stopTimer() {
@@ -277,21 +255,21 @@
     remaining = 0;
     statusBar.textContent = 'STOPPED';
     setIndicator('stopped');
-    display.classList.remove('warning', 'urgent', 'done');
+    display.classList.remove('warning', 'urgent');
     display.textContent = '–:––';
   }
 
-  // WebSocket connection
   const ws = new WebSocket(`ws://${location.host}`);
   ws.onmessage = (e) => {
     const cmd = JSON.parse(e.data);
-    if (cmd.action === 'start') startTimer(cmd.seconds);
-    else if (cmd.action === 'pause') pauseTimer();
+    if (cmd.action === 'start')  startTimer(cmd.seconds);
+    else if (cmd.action === 'pause')  pauseTimer();
     else if (cmd.action === 'resume') resumeTimer();
-    else if (cmd.action === 'stop') stopTimer();
+    else if (cmd.action === 'stop')   stopTimer();
+    else if (cmd.action === 'buzz')   beep(500, 1);
   };
 
-  ws.onopen = () => { statusBar.textContent = 'CONNECTED'; }
+  ws.onopen  = () => { statusBar.textContent = 'CONNECTED'; }
   ws.onclose = () => { statusBar.textContent = 'NO SIGNAL'; }
 </script>
 </body>
