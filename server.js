@@ -3,7 +3,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const PORT = 8080;
+const PORT = 8082;
 
 // Simple HTTP server to serve the HTML files
 const httpServer = http.createServer((req, res) => {

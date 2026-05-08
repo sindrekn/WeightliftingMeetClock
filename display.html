@@ -82,40 +82,6 @@
     user-select: none;
   }
 
-  #time-display.warning {
-    color: var(--yellow);
-    text-shadow:
-      0 0 40px rgba(255,204,0,0.4),
-      0 0 100px rgba(255,204,0,0.2);
-    animation: pulse-warn 1s ease-in-out infinite;
-  }
-
-  #time-display.urgent {
-    color: var(--red);
-    text-shadow:
-      0 0 40px rgba(255,34,68,0.5),
-      0 0 100px rgba(255,34,68,0.3);
-    animation: pulse-urgent 0.5s ease-in-out infinite;
-  }
-
-  #time-display.done {
-    color: var(--red);
-    animation: flash-done 0.4s step-start infinite;
-  }
-
-  @keyframes pulse-warn {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.75; }
-  }
-  @keyframes pulse-urgent {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-  @keyframes flash-done {
-    0%, 49% { opacity: 1; }
-    50%, 100% { opacity: 0.1; }
-  }
-
   #bottom-bar {
     position: fixed;
     bottom: 3vh;
@@ -192,7 +158,7 @@
   // AudioContext for beep
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  function beep(times = 3, freq = 880, duration = 0.12, gap = 0.15) {
+  function beep(times = 1, freq = 500, duration = 0.7, gap = 0.15) {
     let t = audioCtx.currentTime;
     for (let i = 0; i < times; i++) {
       const osc = audioCtx.createOscillator();
@@ -200,14 +166,20 @@
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.frequency.value = freq;
-      osc.type = 'square';
+      osc.type = 'triangle';
       gain.gain.setValueAtTime(0.3, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
       osc.start(t);
       osc.stop(t + duration);
       t += duration + gap;
     }
   }
+
+  // Unlock AudioContext on first interaction
+  document.addEventListener('click', () => {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }, { once: true });
 
   function formatTime(s) {
     const m = Math.floor(s / 60);
@@ -252,7 +224,7 @@
 
         if (remaining === 30 && !beepedAt30) {
           beepedAt30 = true;
-          beep(3, 880, 0.12, 0.13);
+          beep();
         }
 
         if (remaining === 0) {
@@ -260,7 +232,7 @@
           state = 'stopped';
           statusBar.textContent = 'TIME\'S UP';
           setIndicator('stopped');
-          beep(5, 660, 0.2, 0.1);
+          beep(1, 600, 1, 0.15);
         }
       }
     }, 1000);
