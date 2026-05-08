@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Timer Display</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0a;
+    --dim: #1a1a1a;
+    --green: #00ff88;
+    --red: #ff2244;
+    --yellow: #ffcc00;
+    --white: #f0f0f0;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 3px,
+      rgba(0,0,0,0.18) 3px,
+      rgba(0,0,0,0.18) 4px
+    );
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 9;
+  }
+
+  #status-bar {
+    position: fixed;
+    top: 2.5vh;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5vw;
+    letter-spacing: 0.4em;
+    color: var(--green);
+    text-transform: uppercase;
+    opacity: 0.6;
+    transition: color 0.3s;
+  }
+
+  #time-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 38vw;
+    line-height: 0.85;
+    color: var(--white);
+    text-shadow:
+      0 0 40px rgba(0,255,136,0.2),
+      0 0 80px rgba(0,255,136,0.08);
+    letter-spacing: -0.02em;
+    transition: color 0.2s, text-shadow 0.2s;
+    position: relative;
+    z-index: 1;
+    user-select: none;
+  }
+
+  #time-display.warning {
+    color: var(--yellow);
+    text-shadow:
+      0 0 40px rgba(255,204,0,0.4),
+      0 0 100px rgba(255,204,0,0.2);
+    animation: pulse-warn 1s ease-in-out infinite;
+  }
+
+  #time-display.urgent {
+    color: var(--red);
+    text-shadow:
+      0 0 40px rgba(255,34,68,0.5),
+      0 0 100px rgba(255,34,68,0.3);
+    animation: pulse-urgent 0.5s ease-in-out infinite;
+  }
+
+  #time-display.done {
+    color: var(--red);
+    animation: flash-done 0.4s step-start infinite;
+  }
+
+  @keyframes pulse-warn {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+  }
+  @keyframes pulse-urgent {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  @keyframes flash-done {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0.1; }
+  }
+
+  #bottom-bar {
+    position: fixed;
+    bottom: 3vh;
+    display: flex;
+    gap: 4vw;
+    align-items: center;
+  }
+
+  .indicator {
+    font-size: 1.2vw;
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+
+  .indicator.active {
+    color: var(--green);
+  }
+
+  .indicator.paused-ind {
+    color: var(--yellow);
+  }
+
+  /* Corner grid lines decorative */
+  .corner {
+    position: fixed;
+    width: 5vw;
+    height: 5vw;
+    z-index: 2;
+  }
+  .corner::before, .corner::after {
+    content: '';
+    position: absolute;
+    background: var(--green);
+    opacity: 0.3;
+  }
+  .corner::before { width: 100%; height: 2px; }
+  .corner::after  { width: 2px; height: 100%; }
+  .corner.tl { top: 3vh; left: 3vw; }
+  .corner.tr { top: 3vh; right: 3vw; transform: scaleX(-1); }
+  .corner.bl { bottom: 3vh; left: 3vw; transform: scaleY(-1); }
+  .corner.br { bottom: 3vh; right: 3vw; transform: scale(-1); }
+</style>
+</head>
+<body>
+
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+
+<div id="status-bar">READY</div>
+<div id="time-display">–:––</div>
+<div id="bottom-bar">
+  <span class="indicator" id="ind-running">● RUNNING</span>
+  <span class="indicator" id="ind-paused">⏸ PAUSED</span>
+  <span class="indicator" id="ind-stopped">■ STOPPED</span>
+</div>
+
+<script>
+  const display = document.getElementById('time-display');
+  const statusBar = document.getElementById('status-bar');
+  const indRunning = document.getElementById('ind-running');
+  const indPaused = document.getElementById('ind-paused');
+  const indStopped = document.getElementById('ind-stopped');
+
+  let totalSeconds = 0;
+  let remaining = 0;
+  let interval = null;
+  let state = 'stopped'; // stopped | running | paused
+  let beepedAt30 = false;
+
+  // AudioContext for beep
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  function beep(times = 3, freq = 880, duration = 0.12, gap = 0.15) {
+    let t = audioCtx.currentTime;
+    for (let i = 0; i < times; i++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'square';
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+      osc.start(t);
+      osc.stop(t + duration);
+      t += duration + gap;
+    }
+  }
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  function updateDisplay() {
+    display.textContent = remaining >= 0 ? formatTime(remaining) : '0:00';
+
+    display.classList.remove('warning', 'urgent', 'done');
+    if (remaining <= 0 && state === 'running') {
+      display.classList.add('done');
+    } else if (remaining <= 10) {
+      display.classList.add('urgent');
+    } else if (remaining <= 30) {
+      display.classList.add('warning');
+    }
+  }
+
+  function setIndicator(s) {
+    indRunning.classList.toggle('active', s === 'running');
+    indPaused.classList.toggle('paused-ind', s === 'paused');
+    indPaused.classList.toggle('active', false);
+    indStopped.classList.toggle('active', s === 'stopped');
+  }
+
+  function startTimer(seconds) {
+    clearInterval(interval);
+    totalSeconds = seconds;
+    remaining = seconds;
+    beepedAt30 = false;
+    state = 'running';
+    statusBar.textContent = 'RUNNING';
+    setIndicator('running');
+    updateDisplay();
+
+    interval = setInterval(() => {
+      if (remaining > 0) {
+        remaining--;
+        updateDisplay();
+
+        if (remaining === 30 && !beepedAt30) {
+          beepedAt30 = true;
+          beep(3, 880, 0.12, 0.13);
+        }
+
+        if (remaining === 0) {
+          clearInterval(interval);
+          state = 'stopped';
+          statusBar.textContent = 'TIME\'S UP';
+          setIndicator('stopped');
+          beep(5, 660, 0.2, 0.1);
+        }
+      }
+    }, 1000);
+  }
+
+  function pauseTimer() {
+    if (state !== 'running') return;
+    clearInterval(interval);
+    state = 'paused';
+    statusBar.textContent = 'PAUSED';
+    setIndicator('paused');
+  }
+
+  function resumeTimer() {
+    if (state !== 'paused') return;
+    state = 'running';
+    statusBar.textContent = 'RUNNING';
+    setIndicator('running');
+
+    interval = setInterval(() => {
+      if (remaining > 0) {
+        remaining--;
+        updateDisplay();
+        if (remaining === 30 && !beepedAt30) {
+          beepedAt30 = true;
+          beep(3, 880, 0.12, 0.13);
+        }
+        if (remaining === 0) {
+          clearInterval(interval);
+          state = 'stopped';
+          statusBar.textContent = 'TIME\'S UP';
+          setIndicator('stopped');
+          beep(5, 660, 0.2, 0.1);
+        }
+      }
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(interval);
+    state = 'stopped';
+    remaining = 0;
+    statusBar.textContent = 'STOPPED';
+    setIndicator('stopped');
+    display.classList.remove('warning', 'urgent', 'done');
+    display.textContent = '–:––';
+  }
+
+  // WebSocket connection
+  const ws = new WebSocket(`ws://${location.host}`);
+  ws.onmessage = (e) => {
+    const cmd = JSON.parse(e.data);
+    if (cmd.action === 'start') startTimer(cmd.seconds);
+    else if (cmd.action === 'pause') pauseTimer();
+    else if (cmd.action === 'resume') resumeTimer();
+    else if (cmd.action === 'stop') stopTimer();
+  };
+
+  ws.onopen = () => { statusBar.textContent = 'CONNECTED'; }
+  ws.onclose = () => { statusBar.textContent = 'NO SIGNAL'; }
+</script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Timer Remote</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f0f0f;
+    --card: #191919;
+    --border: #2a2a2a;
+    --green: #00ff88;
+    --red: #ff2244;
+    --yellow: #ffcc00;
+    --blue: #44aaff;
+    --text: #e0e0e0;
+    --dim: #555;
+  }
+
+  html, body {
+    width: 100%; min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5vw;
+    gap: 5vw;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 9vw;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    text-shadow: 0 0 20px rgba(0,255,136,0.3);
+    text-align: center;
+    margin-top: 3vw;
+  }
+
+  #status {
+    font-size: 3.5vw;
+    letter-spacing: 0.3em;
+    color: var(--dim);
+    text-transform: uppercase;
+    text-align: center;
+  }
+  #status.connected { color: var(--green); }
+  #status.disconnected { color: var(--red); }
+
+  .section-label {
+    font-size: 3vw;
+    letter-spacing: 0.4em;
+    color: var(--dim);
+    text-transform: uppercase;
+    align-self: flex-start;
+    margin-bottom: -2vw;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 4vw;
+    width: 100%;
+    justify-content: center;
+  }
+
+  button {
+    flex: 1;
+    max-width: 50vw;
+    padding: 6vw 0;
+    border: 2px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 7vw;
+    letter-spacing: 0.12em;
+    border-radius: 2vw;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  button:active {
+    transform: scale(0.95);
+  }
+
+  button.start-btn {
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 20px rgba(0,255,136,0.08);
+  }
+  button.start-btn:active { background: rgba(0,255,136,0.12); }
+
+  button.stop-btn {
+    border-color: var(--red);
+    color: var(--red);
+    box-shadow: 0 0 20px rgba(255,34,68,0.08);
+  }
+  button.stop-btn:active { background: rgba(255,34,68,0.12); }
+
+  button.pause-btn {
+    border-color: var(--yellow);
+    color: var(--yellow);
+    box-shadow: 0 0 20px rgba(255,204,0,0.08);
+  }
+  button.pause-btn:active { background: rgba(255,204,0,0.12); }
+
+  button.resume-btn {
+    border-color: var(--blue);
+    color: var(--blue);
+    box-shadow: 0 0 20px rgba(68,170,255,0.08);
+  }
+  button.resume-btn:active { background: rgba(68,170,255,0.12); }
+
+  button:disabled {
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+  }
+
+  #log {
+    width: 100%;
+    font-size: 3vw;
+    color: var(--dim);
+    text-align: center;
+    letter-spacing: 0.1em;
+    min-height: 4vw;
+  }
+</style>
+</head>
+<body>
+
+<h1>TIMER REMOTE</h1>
+<div id="status" class="disconnected">● DISCONNECTED</div>
+
+<div class="section-label">SELECT DURATION</div>
+<div class="btn-row">
+  <button class="start-btn" onclick="send('start',60)">1 MIN</button>
+  <button class="start-btn" onclick="send('start',120)">2 MIN</button>
+</div>
+
+<div class="divider"></div>
+
+<div class="section-label">CONTROLS</div>
+<div class="btn-row">
+  <button class="pause-btn" onclick="send('pause')">PAUSE</button>
+  <button class="resume-btn" onclick="send('resume')">RESUME</button>
+</div>
+<div class="btn-row">
+  <button class="stop-btn" onclick="send('stop')" style="max-width:100%">■ STOP</button>
+</div>
+
+<div id="log">–</div>
+
+<script>
+  const statusEl = document.getElementById('status');
+  const logEl = document.getElementById('log');
+
+  const ws = new WebSocket(`ws://${location.host}`);
+
+  ws.onopen = () => {
+    statusEl.textContent = '● CONNECTED';
+    statusEl.className = 'connected';
+  };
+  ws.onclose = () => {
+    statusEl.textContent = '● DISCONNECTED';
+    statusEl.className = 'disconnected';
+  };
+
+  function send(action, seconds) {
+    if (ws.readyState !== WebSocket.OPEN) {
+      logEl.textContent = 'NOT CONNECTED';
+      return;
+    }
+    const msg = seconds ? { action, seconds } : { action };
+    ws.send(JSON.stringify(msg));
+
+    const labels = {
+      start: seconds === 60 ? 'STARTED 1 MIN' : 'STARTED 2 MIN',
+      pause: 'PAUSED',
+      resume: 'RESUMED',
+      stop: 'STOPPED'
+    };
+    logEl.textContent = '→ ' + labels[action];
+    setTimeout(() => logEl.textContent = '–', 2000);
+  }
+</script>
+</body>
+</html>
